@@ -311,7 +311,8 @@ function setHero(stream) {
   $("backdrop").style.backgroundImage = `url("${thumbUrl(stream, 320, 180)}")`;
 }
 
-// Twitch starts embeds muted, so sound is turned on through the player API once it plays.
+// Starting muted is the only autoplay browsers always allow; asking for sound up front makes
+// Twitch sit on its play button first. Sound goes on once playback starts.
 // Loudness is left to the TV remote, which Titan OS handles itself.
 function play(stream) {
   show("player");
@@ -322,9 +323,7 @@ function play(stream) {
     width: "100%",
     height: "100%",
     autoplay: true,
-    muted: false,
-    // not in Twitch docs: hides the control bar and the big play button
-    controls: false,
+    muted: true,
   });
   const p = player;
   p.addEventListener(Twitch.Player.READY, () => {
