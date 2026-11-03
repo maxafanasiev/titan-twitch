@@ -159,7 +159,15 @@ html, body {
   transition: opacity 0.35s var(--ease);
 }
 #hero.swap { animation: hero-in 0.45s var(--ease); }
-#hero-name { font-size: 88px; font-weight: 400; letter-spacing: -2px; line-height: 1.1; }
+#hero-name {
+  font-size: 88px;
+  font-weight: 400;
+  letter-spacing: -2px;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 #hero-title {
   margin-top: 14px;
   font-size: 32px;
@@ -287,10 +295,25 @@ html, body {
 #player { position: fixed; inset: 0; display: flex; background: var(--bg); }
 /* keeps keys on our page instead of the cross-origin iframe, so Back still works.
    Nothing may overlap the iframe: Twitch turns autoplay off when the player is covered. */
-#frame { flex: 1; min-width: 0; }
-#frame iframe { display: block; width: 100%; height: 100%; border: 0; pointer-events: none; }
-#chat { display: none; flex: none; width: 23%; min-width: 340px; height: 100%; border: 0; pointer-events: none; }
+#video { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+#frame { flex: 1; min-height: 0; }
+#frame iframe { display: block; width: 100%; height: 100%; border: 0; }
+#chat { display: none; flex: none; width: 23%; min-width: 340px; height: 100%; border: 0; }
+/* on the TV there is no mouse, and a focused iframe would swallow the remote keys */
+.tv #frame iframe, .tv #chat { pointer-events: none; }
 #player.chat #chat { display: block; }
+
+/* the seek counter takes its own strip under the video: anything on top of the player makes Twitch pause it */
+#seek-hud {
+  flex: none;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+}
 
 /* exit */
 #exit {

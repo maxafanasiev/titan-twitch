@@ -13,6 +13,9 @@ const STOP = 413;
 const SEEK = 30;
 const GAP = 32;
 
+const onTitan = navigator.userAgent.includes("TitanOS/");
+document.documentElement.classList.toggle("tv", onTitan);
+
 const STRINGS = window.STRINGS;
 let lang = "en";
 let T = STRINGS.en;
@@ -51,6 +54,8 @@ let loginRunning = false;
 let heroItem = null;
 let player = null;
 let playing = null;
+let seekTo = null;
+let seekTimer = 0;
 
 function show(name) {
   screen = name;
@@ -488,6 +493,9 @@ function openPlayer(kind, item) {
   show("player");
   playing = { kind, item };
   player = null;
+  clearTimeout(seekTimer);
+  seekTo = null;
+  $("seek-hud").hidden = true;
   $("frame").replaceChildren();
   setChat(false);
 }
@@ -543,7 +551,32 @@ function setChat(on) {
     : "about:blank";
 }
 
+// presses add up and the player seeks once they stop: it reports its position late, so reading
+// it on every press would count each step from the same stale time
+let seekFrom = 0;
+
+function seekBy(delta) {
+  const end = player.getDuration() || Infinity;
+  if (seekTo === null) seekFrom = player.getCurrentTime();
+  seekTo = Math.min(end, Math.max(0, (seekTo ?? seekFrom) + delta));
+  const shift = seekTo - seekFrom;
+  const hud = $("seek-hud");
+  hud.textContent = `${shift < 0 ? "−" : "+"}${fmtSeconds(Math.abs(shift))}  →  ${fmtSeconds(seekTo)}`;
+  hud.hidden = false;
+  clearTimeout(seekTimer);
+  seekTimer = setTimeout(() => {
+    player.seek(seekTo);
+    seekTimer = setTimeout(() => {
+      seekTo = null;
+      hud.hidden = true;
+    }, 1200);
+  }, 400);
+}
+
 function stop() {
+  clearTimeout(seekTimer);
+  seekTo = null;
+  $("seek-hud").hidden = true;
   $("frame").replaceChildren();
   setChat(false);
   player = null;
@@ -568,7 +601,7 @@ function onPlayerKey(e, back) {
   else if (k === PAUSE) player.pause();
   else if (e.key === "Enter" || k === PLAY_PAUSE) player.isPaused() ? player.play() : player.pause();
   else if (k === BLUE && playing.kind === "live") setChat(!$("player").classList.contains("chat"));
-  else if (step && playing.kind === "video") player.seek(Math.max(0, player.getCurrentTime() + step * SEEK));
+  else if (step && playing.kind === "video") seekBy(step * SEEK);
 }
 
 function render() {
@@ -688,9 +721,17 @@ document.addEventListener("keydown", (e) => {
   render();
 }, true);
 
+// a mouse click inside the player moves focus into the cross-origin iframe, where our keys can't
+// reach; take it straight back so Back and the arrows keep working
+addEventListener("blur", () =>
+  setTimeout(() => {
+    if (document.activeElement?.tagName === "IFRAME") document.activeElement.blur();
+  }, 0),
+);
+
 // navigator.language on the TV can differ from the language set in TV settings, so ask the SDK first
 async function tvLanguage() {
-  if (navigator.userAgent.includes("TitanOS/") && window.TitanSDK?.deviceInfo) {
+  if (onTitan && window.TitanSDK?.deviceInfo) {
     try {
       const info = await Promise.race([TitanSDK.deviceInfo.getDeviceInfo(), sleep(1500)]);
       if (info?.Product?.language) return info.Product.language;
