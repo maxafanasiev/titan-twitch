@@ -18,12 +18,24 @@ Open http://localhost:9181, then enter the code shown on screen at twitch.tv/act
 
 ## Remote
 
+Browsing:
+
 | Key | Action |
 |---|---|
 | Arrows | Move (Up from the first row reaches search) |
 | OK | Play stream / start typing in search |
-| Back | Close player / clear search / exit |
-| Red | Sign out |
+| Back | Clear search / exit |
+| Red | Sign out of Twitch |
+
+In the player:
+
+| Key | Action |
+|---|---|
+| OK, Play/Pause | Pause / resume |
+| Up / Down | Volume (remembered) |
+| Left / Right, Channel -/+ | Previous / next stream in the same row |
+| Yellow | Mute / unmute |
+| Back, Stop | Close the player |
 
 ## Notes
 
