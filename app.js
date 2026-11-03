@@ -5,12 +5,11 @@ const API = "https://api.twitch.tv/helix";
 const STORE = "twitch_auth";
 const BACK = [8, 461];
 const RED = 403;
-const YELLOW = 405;
 const PLAY_PAUSE = 179;
 const PLAY = 415;
 const PAUSE = 19;
 const STOP = 413;
-const VOLUME_KEY = "twitch_volume";
+
 const CARD_STEP = 432;
 
 const STRINGS = window.STRINGS;
@@ -53,9 +52,6 @@ let found = null;
 let foundLabel = "";
 let heroStream = null;
 let player = null;
-let userMuted = false;
-const savedVolume = localStorage.getItem(VOLUME_KEY);
-let volume = savedVolume === null ? 0.5 : Number(savedVolume);
 
 function show(name) {
   screen = name;
@@ -315,7 +311,8 @@ function setHero(stream) {
   $("backdrop").style.backgroundImage = `url("${thumbUrl(stream, 320, 180)}")`;
 }
 
-// Twitch starts embeds muted, so sound is turned on through the player API once it plays
+// Twitch starts embeds muted, so sound is turned on through the player API once it plays.
+// Loudness is left to the TV remote, which Titan OS handles itself.
 function play(stream) {
   show("player");
   $("frame").replaceChildren();
@@ -328,9 +325,9 @@ function play(stream) {
     muted: false,
   });
   const p = player;
-  p.addEventListener(Twitch.Player.READY, () => p.setVolume(volume));
+  p.addEventListener(Twitch.Player.READY, () => p.setVolume(1));
   p.addEventListener(Twitch.Player.PLAYING, () => {
-    if (!userMuted && p.getMuted()) p.setMuted(false);
+    if (p.getMuted()) p.setMuted(false);
   });
 }
 
@@ -356,16 +353,7 @@ function onPlayerKey(e, back) {
   if (k === PLAY) player.play();
   else if (k === PAUSE) player.pause();
   else if (e.key === "Enter" || k === PLAY_PAUSE) player.isPaused() ? player.play() : player.pause();
-  else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-    volume = Math.round(Math.min(1, Math.max(0, volume + (e.key === "ArrowUp" ? 0.1 : -0.1))) * 10) / 10;
-    localStorage.setItem(VOLUME_KEY, String(volume));
-    player.setVolume(volume);
-    userMuted = false;
-    player.setMuted(false);
-  } else if (k === YELLOW) {
-    userMuted = !player.getMuted();
-    player.setMuted(userMuted);
-  } else if (e.key === "ArrowLeft" || e.key === "PageDown") switchStream(-1);
+  else if (e.key === "ArrowLeft" || e.key === "PageDown") switchStream(-1);
   else if (e.key === "ArrowRight" || e.key === "PageUp") switchStream(1);
 }
 

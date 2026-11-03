@@ -32,10 +32,10 @@ In the player:
 | Key | Action |
 |---|---|
 | OK, Play/Pause | Pause / resume |
-| Up / Down | Volume (remembered) |
 | Left / Right, Channel -/+ | Previous / next stream in the same row |
-| Yellow | Mute / unmute |
 | Back, Stop | Close the player |
+
+Stream sound stays at 100%. Volume and mute are the TV's own remote keys.
 
 ## Notes
 
