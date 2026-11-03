@@ -10,7 +10,7 @@ const CARD_STEP = 432;
 const STRINGS = {
   en: {
     signIn: "Sign in with Twitch",
-    hint: "On your phone, open <b>twitch.tv/activate</b> and enter this code",
+    hint: "Scan with your phone, or open <b>twitch.tv/activate</b> and enter the code",
     noClient: "Set TWITCH_CLIENT_ID in config.js",
     requesting: "Requesting a code…",
     waiting: "Waiting for confirmation…",
@@ -35,7 +35,7 @@ const STRINGS = {
   },
   ru: {
     signIn: "Вход в Twitch",
-    hint: "На телефоне откройте <b>twitch.tv/activate</b> и введите код",
+    hint: "Отсканируйте телефоном или откройте <b>twitch.tv/activate</b> и введите код",
     noClient: "Укажите TWITCH_CLIENT_ID в config.js",
     requesting: "Получаем код…",
     waiting: "Ждём подтверждения…",
@@ -60,7 +60,7 @@ const STRINGS = {
   },
   uk: {
     signIn: "Вхід у Twitch",
-    hint: "На телефоні відкрийте <b>twitch.tv/activate</b> і введіть код",
+    hint: "Відскануйте телефоном або відкрийте <b>twitch.tv/activate</b> і введіть код",
     noClient: "Вкажіть TWITCH_CLIENT_ID у config.js",
     requesting: "Отримуємо код…",
     waiting: "Чекаємо підтвердження…",
@@ -149,6 +149,17 @@ async function post(url, params) {
 
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
+// the verification link already carries the code, so scanning it skips typing
+function showQr(url) {
+  const box = $("login-qr");
+  box.replaceChildren();
+  if (!url || !window.qrcode) return;
+  const qr = qrcode(0, "M");
+  qr.addData(url);
+  qr.make();
+  box.innerHTML = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
+}
+
 async function login() {
   if (loginRunning) return;
   loginRunning = true;
@@ -156,6 +167,7 @@ async function login() {
   const status = (text) => ($("login-status").textContent = text);
   $("login-code").textContent = "";
   $("login-hint").hidden = true;
+  showQr(null);
 
   try {
     if (!CLIENT_ID) return status(T.noClient);
@@ -165,6 +177,7 @@ async function login() {
 
     $("login-hint").hidden = false;
     $("login-code").textContent = data.user_code;
+    showQr(data.verification_uri);
     status(T.waiting);
 
     let wait = data.interval * 1000;

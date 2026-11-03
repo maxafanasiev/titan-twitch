@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1" crossorigin="anonymous"></script>
   <script src="config.js"></script>
 </head>
 <body>
@@ -20,7 +21,10 @@
         <span class="brand"></span>
         <h1 id="login-title"></h1>
         <p id="login-hint" hidden></p>
-        <div id="login-code"></div>
+        <div id="login-pair">
+          <div id="login-qr"></div>
+          <div id="login-code"></div>
+        </div>
         <p id="login-status"></p>
       </div>
     </section>
