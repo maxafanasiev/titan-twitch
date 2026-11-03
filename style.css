@@ -256,19 +256,10 @@ html, body {
 .skeleton-title { width: 320px; height: 30px; border-radius: 8px; margin-bottom: 22px; background: #1b1c21; }
 
 /* player */
-#player { position: absolute; inset: 0; background: var(--bg); }
-/* keeps keys on our page instead of the cross-origin iframe, so Back still works */
+#player { position: fixed; inset: 0; background: var(--bg); }
+/* keeps keys on our page instead of the cross-origin iframe, so Back still works.
+   Nothing may overlap the iframe: Twitch turns autoplay off when the player is covered. */
 #frame { width: 100%; height: 100%; border: 0; pointer-events: none; }
-#player-info {
-  position: absolute;
-  top: 56px;
-  left: 64px;
-  padding: 18px 32px;
-  border-radius: 999px;
-  font-size: 28px;
-  transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
-}
-#player-info.hide { opacity: 0; transform: translateY(-12px); }
 
 /* exit */
 #exit {

@@ -45,11 +45,6 @@
       <div id="viewport" class="enter" style="--i: 2"><div id="rows"></div></div>
     </section>
 
-    <section id="player" hidden>
-      <iframe id="frame" allow="autoplay; fullscreen" tabindex="-1"></iframe>
-      <div id="player-info" class="glass"></div>
-    </section>
-
     <div id="exit" hidden>
       <div class="dialog glass">
         <p id="exit-title"></p>
@@ -60,6 +55,10 @@
       </div>
     </div>
   </div>
+  <!-- outside #stage on purpose: Twitch disables autoplay when the iframe sits under a CSS transform -->
+  <section id="player" hidden>
+    <iframe id="frame" allow="autoplay; fullscreen" tabindex="-1"></iframe>
+  </section>
   <script src="app.js"></script>
 </body>
 </html>

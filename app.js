@@ -309,11 +309,6 @@ function play(stream) {
   show("player");
   const params = new URLSearchParams({ channel: stream.user_login, parent: location.hostname, autoplay: "true" });
   $("frame").src = `https://player.twitch.tv/?${params}`;
-  const info = $("player-info");
-  info.textContent = [stream.user_name, stream.game_name].filter(Boolean).join(" · ");
-  info.classList.remove("hide");
-  clearTimeout(play.timer);
-  play.timer = setTimeout(() => info.classList.add("hide"), 4000);
 }
 
 function stop() {
