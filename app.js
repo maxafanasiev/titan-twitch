@@ -323,9 +323,14 @@ function play(stream) {
     height: "100%",
     autoplay: true,
     muted: false,
+    // not in Twitch docs: hides the control bar and the big play button
+    controls: false,
   });
   const p = player;
-  p.addEventListener(Twitch.Player.READY, () => p.setVolume(1));
+  p.addEventListener(Twitch.Player.READY, () => {
+    p.setVolume(1);
+    p.play();
+  });
   p.addEventListener(Twitch.Player.PLAYING, () => {
     if (p.getMuted()) p.setMuted(false);
   });
