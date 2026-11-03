@@ -7,86 +7,9 @@ const BACK = [8, 461];
 const RED = 403;
 const CARD_STEP = 432;
 
-const STRINGS = {
-  en: {
-    signIn: "Sign in with Twitch",
-    hint: "Scan with your phone, or open <b>twitch.tv/activate</b> and enter the code",
-    noClient: "Set TWITCH_CLIENT_ID in config.js",
-    requesting: "Requesting a code…",
-    waiting: "Waiting for confirmation…",
-    twitchError: (m) => `Twitch: ${m}. Press OK to retry`,
-    expired: "The code expired. Press OK for a new one",
-    noConnection: (m) => `No connection (${m}). Press OK to retry`,
-    retry: (m) => `${m}. Press OK to retry`,
-    followed: "Live from channels you follow",
-    popular: "Popular now",
-    nobody: "Nobody is live right now",
-    noChannels: "No channels found",
-    matching: (q) => `Channels matching “${q}”`,
-    searchFailed: (m) => `Search failed: ${m}`,
-    search: "Search channels",
-    signOut: "Red button: sign out",
-    live: "LIVE",
-    offline: "OFFLINE",
-    watching: (n) => `${n} watching`,
-    exitQ: "Leave Twitch?",
-    stay: "Stay",
-    exit: "Leave",
-  },
-  ru: {
-    signIn: "Вход в Twitch",
-    hint: "Отсканируйте телефоном или откройте <b>twitch.tv/activate</b> и введите код",
-    noClient: "Укажите TWITCH_CLIENT_ID в config.js",
-    requesting: "Получаем код…",
-    waiting: "Ждём подтверждения…",
-    twitchError: (m) => `Twitch: ${m}. Нажмите OK, чтобы повторить`,
-    expired: "Код истёк. Нажмите OK для нового",
-    noConnection: (m) => `Нет соединения (${m}). Нажмите OK, чтобы повторить`,
-    retry: (m) => `${m}. Нажмите OK, чтобы повторить`,
-    followed: "В эфире из ваших подписок",
-    popular: "Популярное сейчас",
-    nobody: "Сейчас никто не в эфире",
-    noChannels: "Каналы не найдены",
-    matching: (q) => `Каналы по запросу «${q}»`,
-    searchFailed: (m) => `Поиск не удался: ${m}`,
-    search: "Поиск каналов",
-    signOut: "Красная кнопка: выйти",
-    live: "В ЭФИРЕ",
-    offline: "НЕ В ЭФИРЕ",
-    watching: (n) => `${n} зрителей`,
-    exitQ: "Выйти из Twitch?",
-    stay: "Остаться",
-    exit: "Выйти",
-  },
-  uk: {
-    signIn: "Вхід у Twitch",
-    hint: "Відскануйте телефоном або відкрийте <b>twitch.tv/activate</b> і введіть код",
-    noClient: "Вкажіть TWITCH_CLIENT_ID у config.js",
-    requesting: "Отримуємо код…",
-    waiting: "Чекаємо підтвердження…",
-    twitchError: (m) => `Twitch: ${m}. Натисніть OK, щоб повторити`,
-    expired: "Код сплив. Натисніть OK для нового",
-    noConnection: (m) => `Немає з'єднання (${m}). Натисніть OK, щоб повторити`,
-    retry: (m) => `${m}. Натисніть OK, щоб повторити`,
-    followed: "В ефірі з ваших підписок",
-    popular: "Популярне зараз",
-    nobody: "Зараз ніхто не в ефірі",
-    noChannels: "Канали не знайдено",
-    matching: (q) => `Канали за запитом «${q}»`,
-    searchFailed: (m) => `Пошук не вдався: ${m}`,
-    search: "Пошук каналів",
-    signOut: "Червона кнопка: вийти",
-    live: "В ЕФІРІ",
-    offline: "НЕ В ЕФІРІ",
-    watching: (n) => `${n} глядачів`,
-    exitQ: "Вийти з Twitch?",
-    stay: "Залишитися",
-    exit: "Вийти",
-  },
-};
-const lang = navigator.language.slice(0, 2);
-const T = STRINGS[lang] || STRINGS.en;
-document.documentElement.lang = STRINGS[lang] ? lang : "en";
+const STRINGS = window.STRINGS;
+let lang = "en";
+let T = STRINGS.en;
 
 const $ = (id) => document.getElementById(id);
 const stage = $("stage");
@@ -94,13 +17,16 @@ const exitDialog = $("exit");
 const searchEl = $("search");
 const exitButtons = [...exitDialog.querySelectorAll(".btn")];
 
-$("login-title").textContent = T.signIn;
-$("login-hint").innerHTML = T.hint;
-$("signout-hint").textContent = T.signOut;
-searchEl.placeholder = T.search;
-$("exit-title").textContent = T.exitQ;
-exitButtons[0].textContent = T.stay;
-exitButtons[1].textContent = T.exit;
+function applyStrings() {
+  document.documentElement.lang = lang;
+  $("login-title").textContent = T.signIn;
+  $("login-hint").innerHTML = T.hint;
+  $("signout-hint").textContent = T.signOut;
+  searchEl.placeholder = T.search;
+  $("exit-title").textContent = T.exitQ;
+  exitButtons[0].textContent = T.stay;
+  exitButtons[1].textContent = T.exit;
+}
 
 function fit() {
   const s = Math.min(innerWidth / 1920, innerHeight / 1080);
@@ -366,10 +292,13 @@ function setHero(stream) {
   badge.className = live ? "badge" : "badge off";
   badge.textContent = live ? T.live : T.offline;
   meta.append(badge);
-  const parts = [];
-  if (stream.viewer_count != null) parts.push(T.watching(stream.viewer_count.toLocaleString()));
-  if (stream.game_name) parts.push(stream.game_name);
-  if (parts.length) meta.append(parts.join(" · "));
+  if (stream.viewer_count != null) {
+    const viewers = document.createElement("span");
+    viewers.className = "viewers";
+    viewers.textContent = stream.viewer_count.toLocaleString(lang);
+    meta.append(viewers);
+  }
+  if (stream.game_name) meta.append(stream.game_name);
   hero.classList.remove("swap");
   void hero.offsetWidth;
   hero.classList.add("swap");
@@ -492,4 +421,23 @@ document.addEventListener("keydown", (e) => {
   render();
 }, true);
 
-browse();
+// navigator.language on the TV can differ from the language set in TV settings, so ask the SDK first
+async function tvLanguage() {
+  if (navigator.userAgent.includes("TitanOS/") && window.TitanSDK?.deviceInfo) {
+    try {
+      const info = await Promise.race([TitanSDK.deviceInfo.getDeviceInfo(), sleep(1500)]);
+      if (info?.Product?.language) return info.Product.language;
+    } catch {}
+  }
+  return navigator.language;
+}
+
+async function start() {
+  const code = (await tvLanguage()).slice(0, 2).toLowerCase();
+  lang = STRINGS[code] ? code : "en";
+  T = STRINGS[lang];
+  applyStrings();
+  browse();
+}
+
+start();

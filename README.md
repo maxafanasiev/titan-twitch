@@ -29,5 +29,8 @@ Open http://localhost:9181, then enter the code shown on screen at twitch.tv/act
 
 - Sign-in uses the OAuth device code flow, so no client secret is shipped. Tokens are kept in
   `localStorage` and refreshed on 401.
+- UI languages: English, Ukrainian, German, French, Spanish, Italian, Dutch, Polish, Portuguese
+  (`strings.js`). On the TV the language comes from `TitanSDK.deviceInfo.getDeviceInfo()`, elsewhere
+  from `navigator.language`. Anything else falls back to English.
 - The Twitch player only embeds on `localhost` or an HTTPS domain, and `parent` is taken from
   `location.hostname`. Host the app over HTTPS for the TV.
