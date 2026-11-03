@@ -5,12 +5,13 @@ const API = "https://api.twitch.tv/helix";
 const STORE = "twitch_auth";
 const BACK = [8, 461];
 const RED = 403;
+const BLUE = 406;
 const PLAY_PAUSE = 179;
 const PLAY = 415;
 const PAUSE = 19;
 const STOP = 413;
-
-const CARD_STEP = 432;
+const SEEK = 30;
+const GAP = 32;
 
 const STRINGS = window.STRINGS;
 let lang = "en";
@@ -26,7 +27,6 @@ function applyStrings() {
   document.documentElement.lang = lang;
   $("login-title").textContent = T.signIn;
   $("login-hint").innerHTML = T.hint;
-  $("signout-hint").textContent = T.signOut;
   searchEl.placeholder = T.search;
   $("exit-title").textContent = T.exitQ;
   exitButtons[0].textContent = T.stay;
@@ -41,17 +41,16 @@ addEventListener("resize", fit);
 fit();
 
 let screen = "login";
+let page = null;
+const pages = [];
 let rows = [];
 let r = 0;
 let cols = [];
 let exitIndex = 0;
 let loginRunning = false;
-let followedStreams = [];
-let topStreams = [];
-let found = null;
-let foundLabel = "";
-let heroStream = null;
+let heroItem = null;
 let player = null;
+let playing = null;
 
 function show(name) {
   screen = name;
@@ -169,49 +168,151 @@ async function helix(path, retried) {
   return res.json();
 }
 
-const thumbUrl = (stream, w, h) => stream.thumbnail_url.replace("{width}", w).replace("{height}", h);
+// streams use {width}x{height}, videos %{width}x%{height}
+const sized = (url, w, h) =>
+  (url || "").replace("%{width}", w).replace("%{height}", h).replace("{width}", w).replace("{height}", h);
 
-function card(stream) {
+function fmtDuration(text) {
+  const [, h = 0, m = 0, s = 0] = /(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/.exec(text || "").map((v) => Number(v) || 0);
+  return fmtSeconds(h * 3600 + m * 60 + s);
+}
+
+function fmtSeconds(total) {
+  const t = Math.round(total);
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const s = String(t % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
+}
+
+const fmtDate = (iso) => new Date(iso).toLocaleDateString(lang, { day: "numeric", month: "short" });
+
+const streamItem = (s) => ({
+  type: "stream",
+  login: s.user_login,
+  name: s.user_name,
+  title: s.title,
+  game: s.game_name,
+  viewers: s.viewer_count,
+  live: true,
+  image: sized(s.thumbnail_url, 400, 225),
+});
+
+const searchItem = (c) => ({
+  type: "channel",
+  login: c.broadcaster_login,
+  name: c.display_name,
+  title: c.title,
+  game: c.game_name,
+  live: c.is_live,
+  image: c.thumbnail_url,
+});
+
+const followedItem = (f, user, liveIds) => ({
+  type: "channel",
+  login: f.broadcaster_login,
+  name: f.broadcaster_name,
+  title: user?.description,
+  live: liveIds.has(f.broadcaster_id),
+  image: user?.profile_image_url,
+});
+
+const gameItem = (g) => ({ type: "game", id: g.id, name: g.name, image: sized(g.box_art_url, 285, 380) });
+
+const videoItem = (v) => ({
+  type: "video",
+  id: v.id,
+  name: v.title,
+  title: v.user_name,
+  viewers: v.view_count,
+  duration: fmtDuration(v.duration),
+  date: fmtDate(v.created_at),
+  image: sized(v.thumbnail_url, 400, 225),
+});
+
+const clipItem = (c) => ({
+  type: "clip",
+  id: c.id,
+  name: c.title,
+  title: c.broadcaster_name,
+  viewers: c.view_count,
+  duration: fmtSeconds(c.duration),
+  date: fmtDate(c.created_at),
+  image: c.thumbnail_url,
+});
+
+function card(item) {
   const el = document.createElement("div");
-  el.className = "card";
-  if (stream.live !== undefined) el.classList.add("channel");
-  const thumb = document.createElement("div");
-  thumb.className = "thumb";
-  const img = document.createElement("img");
-  img.src = thumbUrl(stream, 400, 225);
-  img.alt = "";
-  thumb.append(img);
-  const name = document.createElement("div");
-  name.className = "name";
-  name.textContent = stream.user_name;
-  el.append(thumb, name);
-  el.stream = stream;
+  el.className = `card ${item.type}`;
+  if (item.type === "live") {
+    const button = document.createElement("div");
+    button.className = "action glass";
+    const icon = document.createElement("span");
+    icon.className = "play-icon";
+    button.append(icon, T.watchLive);
+    const hint = document.createElement("div");
+    hint.className = "name";
+    hint.textContent = T.chatHint;
+    el.append(button, hint);
+  } else if (item.type === "signout") {
+    const button = document.createElement("div");
+    button.className = "action glass";
+    button.textContent = item.name;
+    el.append(button);
+  } else {
+    const thumb = document.createElement("div");
+    thumb.className = "thumb";
+    if (item.image) {
+      const img = document.createElement("img");
+      img.alt = "";
+      // a broadcast that is still running has no thumbnail yet and its URL 404s
+      img.onerror = () => img.remove();
+      img.src = item.image;
+      thumb.append(img);
+    }
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = item.name;
+    el.append(thumb, name);
+  }
+  el.item = item;
   return el;
 }
 
-function addRow(container, label, streams, emptyText) {
-  const title = document.createElement("h2");
-  title.className = "row-title";
-  title.textContent = label;
-  container.append(title);
-  if (!streams.length) {
-    const empty = document.createElement("div");
-    empty.className = "empty";
-    empty.textContent = emptyText;
-    container.append(empty);
-    return;
+function buildRows(defs) {
+  const container = $("rows");
+  container.replaceChildren();
+  container.style.transform = "";
+  rows = [];
+  for (const def of defs) {
+    if (def.label) {
+      const title = document.createElement("h2");
+      title.className = "row-title";
+      title.textContent = def.label;
+      container.append(title);
+    }
+    if (!def.items.length) {
+      if (def.empty) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = def.empty;
+        container.append(empty);
+      }
+      continue;
+    }
+    const row = document.createElement("div");
+    row.className = "row";
+    const cards = def.items.map(card);
+    row.append(...cards);
+    container.append(row);
+    rows.push(cards);
   }
-  const row = document.createElement("div");
-  row.className = "row";
-  const cards = streams.map(card);
-  row.append(...cards);
-  container.append(row);
-  rows.push(cards);
 }
 
 function skeleton() {
   const container = $("rows");
   container.replaceChildren();
+  container.style.transform = "";
   const title = document.createElement("div");
   title.className = "skeleton-title";
   const row = document.createElement("div");
@@ -225,105 +326,180 @@ function skeleton() {
   container.append(title, row);
 }
 
-async function browse() {
-  if (!auth) return login();
+function showPage(p) {
+  page = p;
+  show("browse");
+  searchEl.hidden = p.kind !== "home";
+  buildRows(p.defs);
+  r = p.r ?? (rows.length ? 0 : p.kind === "home" ? -1 : 0);
+  cols = p.cols ?? rows.map(() => 0);
+  if (p.hero) setHero(p.hero);
+  render();
+}
+
+async function loadInto(load) {
   show("browse");
   skeleton();
+  rows = [];
   try {
-    if (!auth.userId) saveAuth({ ...auth, userId: (await helix("/users")).data[0].id });
-    const [mine, popular] = await Promise.all([
-      helix(`/streams/followed?user_id=${auth.userId}&first=20`),
-      helix("/streams?first=20"),
-    ]);
-    followedStreams = mine.data;
-    topStreams = popular.data;
-    renderRows();
-    render();
+    showPage(await load());
   } catch (e) {
     if (!auth) return login();
+    page = { kind: "error", defs: [], retry: load };
     rows = [];
-    $("rows").replaceChildren();
     const msg = document.createElement("div");
     msg.className = "empty";
     msg.textContent = T.retry(e.message);
-    $("rows").append(msg);
+    $("rows").replaceChildren(msg);
   }
 }
 
-function renderRows() {
-  const container = $("rows");
-  container.replaceChildren();
-  rows = [];
-  if (found) addRow(container, foundLabel, found, T.noChannels);
-  addRow(container, T.followed, followedStreams, T.nobody);
-  addRow(container, T.popular, topStreams, T.nobody);
-  r = rows.length ? 0 : -1;
-  cols = rows.map(() => 0);
+function openPage(load) {
+  if (page) {
+    page.r = r;
+    page.cols = cols;
+    pages.push(page);
+  }
+  return loadInto(load);
+}
+
+function goBack() {
+  showPage(pages.pop());
+}
+
+async function homePage() {
+  if (!auth.userId) saveAuth({ ...auth, userId: (await helix("/users")).data[0].id });
+  const [live, top, games, follows] = await Promise.all([
+    helix(`/streams/followed?user_id=${auth.userId}&first=40`),
+    helix("/streams?first=20"),
+    helix("/games/top?first=20"),
+    helix(`/channels/followed?user_id=${auth.userId}&first=100`),
+  ]);
+  const ids = follows.data.map((f) => `id=${f.broadcaster_id}`);
+  const users = ids.length ? await helix(`/users?${ids.join("&")}`) : { data: [] };
+  const byId = new Map(users.data.map((u) => [u.id, u]));
+  const liveIds = new Set(live.data.map((s) => s.user_id));
+  const base = [
+    { label: T.followed, items: live.data.map(streamItem), empty: T.nobody },
+    { label: T.popular, items: top.data.map(streamItem), empty: T.nobody },
+    { label: T.categories, items: games.data.map(gameItem) },
+    {
+      label: T.followedChannels,
+      items: follows.data.map((f) => followedItem(f, byId.get(f.broadcaster_id), liveIds)),
+      empty: T.nobodyFollowed,
+    },
+    { label: T.account, items: [{ type: "signout", name: T.signOut }] },
+  ];
+  return { kind: "home", base, defs: base };
+}
+
+async function channelPage(login) {
+  const q = encodeURIComponent(login);
+  const [users, streams] = await Promise.all([helix(`/users?login=${q}`), helix(`/streams?user_login=${q}`)]);
+  const user = users.data[0];
+  if (!user) throw new Error(login);
+  const stream = streams.data[0];
+  const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString();
+  const [videos, recent] = await Promise.all([
+    helix(`/videos?user_id=${user.id}&type=archive&first=20`),
+    helix(`/clips?broadcaster_id=${user.id}&started_at=${encodeURIComponent(weekAgo)}&first=20`),
+  ]);
+  const clips = recent.data.length ? recent : await helix(`/clips?broadcaster_id=${user.id}&first=20`);
+  const hero = {
+    type: "channel",
+    login: user.login,
+    name: user.display_name,
+    title: stream ? stream.title : user.description,
+    game: stream?.game_name,
+    viewers: stream?.viewer_count,
+    live: !!stream,
+    image: stream ? sized(stream.thumbnail_url, 400, 225) : user.profile_image_url,
+  };
+  const defs = [];
+  if (stream) defs.push({ items: [{ ...streamItem(stream), type: "live" }] });
+  defs.push({ label: T.pastBroadcasts, items: videos.data.map(videoItem), empty: T.noVideos });
+  defs.push({ label: T.popularClips, items: clips.data.map(clipItem), empty: T.noClips });
+  return { kind: "channel", defs, hero };
+}
+
+async function categoryPage(game) {
+  const streams = await helix(`/streams?game_id=${game.id}&first=40`);
+  return { kind: "category", defs: [{ label: T.liveNow, items: streams.data.map(streamItem), empty: T.nobody }], hero: game };
+}
+
+function browse() {
+  if (!auth) return login();
+  pages.length = 0;
+  page = null;
+  return loadInto(homePage);
 }
 
 async function search(query) {
-  if (!query) {
-    found = null;
-    return renderRows();
+  const home = page;
+  if (query) {
+    let row;
+    try {
+      const res = await helix(`/search/channels?query=${encodeURIComponent(query)}&first=20`);
+      row = { label: T.matching(query), items: res.data.map(searchItem), empty: T.noChannels };
+    } catch (e) {
+      if (!auth) return login();
+      row = { label: T.searchFailed(e.message), items: [] };
+    }
+    home.defs = [row, ...home.base];
+  } else {
+    home.defs = home.base;
   }
-  try {
-    const res = await helix(`/search/channels?query=${encodeURIComponent(query)}&first=20`);
-    found = res.data.map((c) => ({
-      user_login: c.broadcaster_login,
-      user_name: c.display_name,
-      title: c.title,
-      game_name: c.game_name,
-      thumbnail_url: c.thumbnail_url,
-      live: c.is_live,
-    }));
-    foundLabel = T.matching(query);
-  } catch (e) {
-    if (!auth) return login();
-    found = [];
-    foundLabel = T.searchFailed(e.message);
-  }
-  renderRows();
+  home.r = home.cols = undefined;
+  showPage(home);
 }
 
-function setHero(stream) {
-  if (stream === heroStream) return;
-  heroStream = stream;
+function setHero(item) {
+  if (item === heroItem) return;
+  heroItem = item;
   const hero = $("hero");
-  $("hero-name").textContent = stream.user_name;
-  $("hero-title").textContent = stream.title || "";
+  $("hero-name").textContent = item.name;
+  $("hero-title").textContent = item.title || "";
   const meta = $("hero-meta");
   meta.replaceChildren();
-  const live = stream.live ?? true;
-  const badge = document.createElement("span");
-  badge.className = live ? "badge" : "badge off";
-  badge.textContent = live ? T.live : T.offline;
-  meta.append(badge);
-  if (stream.viewer_count != null) {
+  if (item.live !== undefined) {
+    const badge = document.createElement("span");
+    badge.className = item.live ? "badge" : "badge off";
+    badge.textContent = item.live ? T.live : T.offline;
+    meta.append(badge);
+  }
+  if (item.viewers != null) {
     const viewers = document.createElement("span");
     viewers.className = "viewers";
-    viewers.textContent = stream.viewer_count.toLocaleString(lang);
+    viewers.textContent = item.viewers.toLocaleString(lang);
     meta.append(viewers);
   }
-  if (stream.game_name) meta.append(stream.game_name);
+  const rest = [item.game, item.duration, item.date].filter(Boolean).join(" · ");
+  if (rest) meta.append(rest);
   hero.classList.remove("swap");
   void hero.offsetWidth;
   hero.classList.add("swap");
-  $("backdrop").style.backgroundImage = `url("${thumbUrl(stream, 320, 180)}")`;
+  if (item.image) $("backdrop").style.backgroundImage = `url("${item.image}")`;
 }
 
 // Starting muted is the only autoplay browsers always allow; asking for sound up front makes
 // Twitch sit on its play button first. Sound goes on once playback starts.
 // Loudness is left to the TV remote, which Titan OS handles itself.
-function play(stream) {
+function openPlayer(kind, item) {
   show("player");
+  playing = { kind, item };
+  player = null;
   $("frame").replaceChildren();
+  setChat(false);
+}
+
+function twitchPlayer(options) {
   player = new Twitch.Player("frame", {
-    channel: stream.user_login,
     parent: [location.hostname],
     width: "100%",
     height: "100%",
     autoplay: true,
     muted: true,
+    ...options,
   });
   const p = player;
   p.addEventListener(Twitch.Player.READY, () => {
@@ -335,31 +511,64 @@ function play(stream) {
   });
 }
 
+function playLive(item) {
+  openPlayer("live", item);
+  twitchPlayer({ channel: item.login });
+}
+
+function playVideo(item) {
+  openPlayer("video", item);
+  twitchPlayer({ video: item.id });
+}
+
+// clips have no player API, only the plain embed
+function playClip(item) {
+  openPlayer("clip", item);
+  const frame = document.createElement("iframe");
+  frame.allow = "autoplay; fullscreen";
+  frame.src = `https://clips.twitch.tv/embed?${new URLSearchParams({
+    clip: item.id,
+    parent: location.hostname,
+    autoplay: "true",
+    muted: "false",
+  })}`;
+  $("frame").append(frame);
+}
+
+// the chat sits next to the video, never on top of it: Twitch stops autoplay when the player is covered
+function setChat(on) {
+  $("player").classList.toggle("chat", on);
+  $("chat").src = on
+    ? `https://www.twitch.tv/embed/${playing.item.login}/chat?parent=${location.hostname}&darkpopout`
+    : "about:blank";
+}
+
 function stop() {
   $("frame").replaceChildren();
+  setChat(false);
   player = null;
+  playing = null;
   show("browse");
   render();
 }
 
-function switchStream(step) {
-  if (r < 0 || !rows[r]) return;
-  const next = Math.min(rows[r].length - 1, Math.max(0, cols[r] + step));
-  if (next === cols[r]) return;
-  cols[r] = next;
-  player.setChannel(rows[r][next].stream.user_login);
-}
-
-// on a live channel Twitch's pause stops the stream and shows the channel image, play rejoins live
 function onPlayerKey(e, back) {
-  if (back || e.keyCode === STOP) return stop();
-  if (!player) return;
   const k = e.keyCode;
+  if (back || k === STOP) return stop();
+  const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+  if (playing.kind === "clip") {
+    if (!step || !rows[r]) return;
+    const next = Math.min(rows[r].length - 1, Math.max(0, cols[r] + step));
+    if (next === cols[r]) return;
+    cols[r] = next;
+    return playClip(rows[r][next].item);
+  }
+  if (!player) return;
   if (k === PLAY) player.play();
   else if (k === PAUSE) player.pause();
   else if (e.key === "Enter" || k === PLAY_PAUSE) player.isPaused() ? player.play() : player.pause();
-  else if (e.key === "ArrowLeft" || e.key === "PageDown") switchStream(-1);
-  else if (e.key === "ArrowRight" || e.key === "PageUp") switchStream(1);
+  else if (k === BLUE && playing.kind === "live") setChat(!$("player").classList.contains("chat"));
+  else if (step && playing.kind === "video") player.seek(Math.max(0, player.getCurrentTime() + step * SEEK));
 }
 
 function render() {
@@ -374,10 +583,11 @@ function render() {
   if (!rows.length) return;
   const el = rows[r][cols[r]];
   el.classList.add("focus");
-  el.parentElement.style.transform = `translateX(${-Math.max(0, cols[r] - 1) * CARD_STEP}px)`;
+  const step = el.offsetWidth + GAP;
+  el.parentElement.style.transform = `translateX(${-Math.max(0, cols[r] - 1) * step}px)`;
   const first = rows[0][0].parentElement;
   $("rows").style.transform = `translateY(${first.offsetTop - el.parentElement.offsetTop}px)`;
-  setHero(el.stream);
+  setHero(el.item);
 }
 
 function exitApp() {
@@ -387,6 +597,22 @@ function exitApp() {
   else window.close();
 }
 
+function activate(item) {
+  if (item.type === "stream" || item.type === "channel") openPage(() => channelPage(item.login));
+  else if (item.type === "game") openPage(() => categoryPage(item));
+  else if (item.type === "live") playLive(item);
+  else if (item.type === "video") playVideo(item);
+  else if (item.type === "clip") playClip(item);
+  else if (item.type === "signout") signOut();
+}
+
+function signOut() {
+  saveAuth(null);
+  pages.length = 0;
+  page = null;
+  login();
+}
+
 function onBrowseKey(e) {
   if (r === -1) {
     if (e.key === "Enter") searchEl.focus();
@@ -394,14 +620,14 @@ function onBrowseKey(e) {
     return;
   }
   if (!rows.length) {
-    if (e.key === "Enter") browse();
+    if (e.key === "Enter" && page?.retry) loadInto(page.retry);
     return;
   }
   if (e.key === "ArrowLeft") cols[r] = Math.max(0, cols[r] - 1);
   if (e.key === "ArrowRight") cols[r] = Math.min(rows[r].length - 1, cols[r] + 1);
-  if (e.key === "ArrowUp") r -= 1;
+  if (e.key === "ArrowUp") r = page.kind === "home" ? r - 1 : Math.max(0, r - 1);
   if (e.key === "ArrowDown") r = Math.min(rows.length - 1, r + 1);
-  if (e.key === "Enter") play(rows[r][cols[r]].stream);
+  if (e.key === "Enter") activate(rows[r][cols[r]].item);
 }
 
 // while typing, Backspace (keyCode 8, also Philips Back) deletes text and only acts as Back once the field is empty
@@ -409,7 +635,7 @@ function onSearchKey(e, back) {
   if (e.key === "Enter") {
     e.preventDefault();
     searchEl.blur();
-    search(searchEl.value.trim()).then(render);
+    search(searchEl.value.trim());
   } else if (back || e.key === "ArrowDown") {
     searchEl.blur();
     if (e.key === "ArrowDown" && rows.length) r = 0;
@@ -438,25 +664,26 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     return onPlayerKey(e, back);
   }
-  if (back && found && screen === "browse") {
-    found = null;
-    searchEl.value = "";
-    renderRows();
-    return render();
+  if (screen === "login") {
+    if (back) {
+      exitIndex = 0;
+      exitDialog.hidden = false;
+      return render();
+    }
+    if (e.key === "Enter") login();
+    return;
   }
   if (back) {
+    if (page?.kind === "home" && page.defs !== page.base) {
+      searchEl.value = "";
+      return search("");
+    }
+    if (pages.length) return goBack();
     exitIndex = 0;
     exitDialog.hidden = false;
     return render();
   }
-  if (screen === "login") {
-    if (e.key === "Enter") login();
-    return;
-  }
-  if (e.keyCode === RED) {
-    saveAuth(null);
-    return login();
-  }
+  if (e.keyCode === RED) return signOut();
   onBrowseKey(e);
   render();
 }, true);

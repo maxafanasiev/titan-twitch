@@ -16,24 +16,33 @@ python3 -m http.server 9181
 
 Open http://localhost:9181, then enter the code shown on screen at twitch.tv/activate.
 
+## What's inside
+
+- Home: live channels you follow, popular streams, categories, all channels you follow, account.
+- Channel page (OK on any channel): watch live, past broadcasts, popular clips of the last week
+  (all time if the week has none).
+- Category page: live streams in that game.
+- Search for channels from the top of Home.
+
 ## Remote
 
 Browsing:
 
 | Key | Action |
 |---|---|
-| Arrows | Move (Up from the first row reaches search) |
-| OK | Play stream / start typing in search |
-| Back | Clear search / exit |
-| Red | Sign out of Twitch |
+| Arrows | Move (Up from the first row of Home reaches search) |
+| OK | Open / play |
+| Back | Previous page, clear search, exit |
+| Red | Sign out (also under Account on Home) |
 
 In the player:
 
-| Key | Action |
-|---|---|
-| OK, Play/Pause | Pause / back to live (Twitch shows the channel image while paused) |
-| Left / Right, Channel -/+ | Previous / next stream in the same row |
-| Back, Stop | Close the player |
+| Key | Live | Past broadcast | Clip |
+|---|---|---|---|
+| OK, Play/Pause | Pause / back to live | Pause / resume | |
+| Left / Right | | Seek 30 s | Previous / next clip |
+| Blue | Chat next to the video | | |
+| Back, Stop | Close | Close | Close |
 
 Stream sound stays at 100%. Volume and mute are the TV's own remote keys.
 

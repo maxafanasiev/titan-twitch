@@ -7,12 +7,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500&display=swap" rel="stylesheet">
   <!-- bump ?v= when these files change: GitHub Pages lets browsers cache them for 10 minutes -->
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=11">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1" crossorigin="anonymous"></script>
   <script src="https://sdk.titanos.tv/sdk/sdk.js"></script>
   <script src="https://player.twitch.tv/js/embed/v1.js"></script>
-  <script src="config.js?v=8"></script>
-  <script src="strings.js?v=8"></script>
+  <script src="config.js?v=11"></script>
+  <script src="strings.js?v=11"></script>
 </head>
 <body>
   <div id="stage">
@@ -36,7 +36,6 @@
     <section id="browse" hidden>
       <header class="enter" style="--i: 0">
         <span class="brand"></span>
-        <span id="signout-hint"></span>
         <input id="search" class="search glass" type="text" autocomplete="off">
       </header>
       <div id="hero" class="enter" style="--i: 1">
@@ -60,7 +59,8 @@
   <!-- outside #stage on purpose: Twitch disables autoplay when the iframe sits under a CSS transform -->
   <section id="player" hidden>
     <div id="frame"></div>
+    <iframe id="chat" tabindex="-1"></iframe>
   </section>
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
