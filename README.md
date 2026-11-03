@@ -1,0 +1,33 @@
+# titan-twitch
+
+A Twitch client for Titan OS: live channels you follow, popular streams, channel search, and the official
+embedded player.
+Plain HTML5, no build step, no backend.
+
+## Setup
+
+1. Register an app at https://dev.twitch.tv/console/apps with **Client Type: Public**.
+   Any OAuth redirect URL works (e.g. `http://localhost`), the device flow doesn't use it.
+2. Put its Client ID in `config.js`.
+
+```sh
+python3 -m http.server 9181
+```
+
+Open http://localhost:9181, then enter the code shown on screen at twitch.tv/activate.
+
+## Remote
+
+| Key | Action |
+|---|---|
+| Arrows | Move (Up from the first row reaches search) |
+| OK | Play stream / start typing in search |
+| Back | Close player / clear search / exit |
+| Red | Sign out |
+
+## Notes
+
+- Sign-in uses the OAuth device code flow, so no client secret is shipped. Tokens are kept in
+  `localStorage` and refreshed on 401.
+- The Twitch player only embeds on `localhost` or an HTTPS domain, and `parent` is taken from
+  `location.hostname`. Host the app over HTTPS for the TV.

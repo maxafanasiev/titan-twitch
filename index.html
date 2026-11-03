@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Twitch TV</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+</head>
+<body>
+  <div id="stage">
+    <div id="backdrop"></div>
+    <div id="scrim"></div>
+    <div id="glow"></div>
+
+    <section id="login" hidden>
+      <div class="panel glass">
+        <span class="brand"></span>
+        <h1 id="login-title"></h1>
+        <p id="login-hint" hidden></p>
+        <div id="login-code"></div>
+        <p id="login-status"></p>
+      </div>
+    </section>
+
+    <section id="browse" hidden>
+      <header class="enter" style="--i: 0">
+        <span class="brand"></span>
+        <span id="signout-hint"></span>
+        <input id="search" class="search glass" type="text" autocomplete="off">
+      </header>
+      <div id="hero" class="enter" style="--i: 1">
+        <h1 id="hero-name"></h1>
+        <p id="hero-title"></p>
+        <p id="hero-meta"></p>
+      </div>
+      <div id="viewport" class="enter" style="--i: 2"><div id="rows"></div></div>
+    </section>
+
+    <section id="player" hidden>
+      <iframe id="frame" allow="autoplay; fullscreen" tabindex="-1"></iframe>
+      <div id="player-info" class="glass"></div>
+    </section>
+
+    <div id="exit" hidden>
+      <div class="dialog glass">
+        <p id="exit-title"></p>
+        <div class="buttons">
+          <button class="btn" data-action="stay"></button>
+          <button class="btn" data-action="exit"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
