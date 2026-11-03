@@ -5,9 +5,6 @@ const API = "https://api.twitch.tv/helix";
 const STORE = "twitch_auth";
 const BACK = [8, 461];
 const RED = 403;
-const PLAY_PAUSE = 179;
-const PLAY = 415;
-const PAUSE = 19;
 const STOP = 413;
 
 const CARD_STEP = 432;
@@ -350,14 +347,11 @@ function switchStream(step) {
   player.setChannel(rows[r][next].stream.user_login);
 }
 
+// no pause: on a live channel Twitch's pause drops the stream and shows the channel's offline image
 function onPlayerKey(e, back) {
   if (back || e.keyCode === STOP) return stop();
   if (!player) return;
-  const k = e.keyCode;
-  if (k === PLAY) player.play();
-  else if (k === PAUSE) player.pause();
-  else if (e.key === "Enter" || k === PLAY_PAUSE) player.isPaused() ? player.play() : player.pause();
-  else if (e.key === "ArrowLeft" || e.key === "PageDown") switchStream(-1);
+  if (e.key === "ArrowLeft" || e.key === "PageDown") switchStream(-1);
   else if (e.key === "ArrowRight" || e.key === "PageUp") switchStream(1);
 }
 

@@ -31,7 +31,6 @@ In the player:
 
 | Key | Action |
 |---|---|
-| OK, Play/Pause | Pause / resume |
 | Left / Right, Channel -/+ | Previous / next stream in the same row |
 | Back, Stop | Close the player |
 
